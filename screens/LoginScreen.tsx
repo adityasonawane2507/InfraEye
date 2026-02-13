@@ -10,7 +10,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone: '+91 ',
   });
   const [otp, setOtp] = useState(['', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +72,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       setIsLoading(false);
       onLogin();
     }, 1200);
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Prevent deleting the prefix
+    if (!val.startsWith('+91 ')) {
+      setFormData({ ...formData, phone: '+91 ' });
+    } else {
+      setFormData({ ...formData, phone: val });
+    }
   };
 
   return (
@@ -154,8 +164,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                       type="tel" 
                       required
                       value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      placeholder="+1 (555) 000-0000"
+                      onChange={handlePhoneChange}
+                      placeholder="+91 98765 43210"
                       className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-11 pr-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-700 text-sm"
                     />
                   </div>
