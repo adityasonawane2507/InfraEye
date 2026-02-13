@@ -11,7 +11,10 @@ import { RoadReport } from './types';
 
 const AppContent: React.FC = () => {
   const [isAppReady, setIsAppReady] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check for auth status in localStorage
+    return window.localStorage.getItem('isAuthenticated') === 'true';
+  });
   const [reports, setReports] = useState<RoadReport[]>([]);
 
   useEffect(() => {
@@ -20,6 +23,11 @@ const AppContent: React.FC = () => {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Persist auth status in localStorage
+  useEffect(() => {
+    window.localStorage.setItem('isAuthenticated', isAuthenticated.toString());
+  }, [isAuthenticated]);
 
   const addReport = (report: RoadReport) => {
     setReports(prev => [report, ...prev]);
