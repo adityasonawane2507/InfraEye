@@ -2,24 +2,41 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RoadReport } from '../types';
+import { useVoice } from '../hooks/useVoice';
+import AudioWaveform from '../components/AudioWaveform';
+import { mockTranscribe } from '../services/mockTranscriptionService';
 
 interface ReportScreenProps {
-  onAddReport: (report: RoadReport) => void;
+  onAddReport: (report: Omit<RoadReport, 'id'>) => Promise<void>;
 }
 
 const ReportScreen: React.FC<ReportScreenProps> = ({ onAddReport }) => {
   const navigate = useNavigate();
   const [photo, setPhoto] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<string | null>(null);
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const { isRecording, startRecording, stopRecording, audioData, analyser } = useVoice();
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const handleStopRecording = async () => {
+    const { url, blob } = await stopRecording();
+    if (blob) {
+      setIsTranscribing(true);
+      try {
+        const transcribedText = await mockTranscribe(url);
+        setNote(transcribedText);
+      } catch (error) {
+        console.error("Transcription error:", error);
+      } finally {
+        setIsTranscribing(false);
+      }
+    }
+  };
 
   // Initialize camera
   const startCamera = async () => {
@@ -27,8 +44,8 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ onAddReport }) => {
       const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
-    } catch (err) {
-      console.error("Camera access error:", err);
+    } catch (err: any) {
+      console.error("Camera access error:", err.message);
     }
   };
 
@@ -53,61 +70,36 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ onAddReport }) => {
     }
   };
 
-  // Microphone functionality
-  const toggleRecording = async () => {
-    if (!isRecording) {
-      try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(audioStream);
-        mediaRecorderRef.current = mediaRecorder;
-        const chunks: Blob[] = [];
-
-        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'audio/ogg; codecs=opus' });
-          setAudioBlob(URL.createObjectURL(blob));
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-      } catch (err) {
-        console.error("Microphone access error:", err);
-      }
-    } else {
-      mediaRecorderRef.current?.stop();
-      setIsRecording(false);
-    }
-  };
-
   // Location tracking
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => console.error("Location error:", err)
+        (err) => console.error(`Location error: ${err.message}`)
       );
     }
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Simulate API call delay
-    setTimeout(() => {
-      const reportId = Math.random().toString(36).substr(2, 9).toUpperCase();
-      const newReport: RoadReport = {
-        id: reportId,
+    try {
+      const newReport: Omit<RoadReport, 'id'> = {
         timestamp: Date.now(),
         latitude: location?.lat || 0,
         longitude: location?.lng || 0,
         photoUrl: photo || undefined,
-        voiceUrl: audioBlob || undefined,
+        voiceUrl: audioData.url || undefined,
         note,
         status: 'Pending',
         locationName: 'Main St & 4th Ave' // Mocked geocoding
       };
-      onAddReport(newReport);
-      navigate(`/confirmation/${newReport.id}`);
-    }, 1500);
+      await onAddReport(newReport);
+      navigate(`/confirmation/new`);
+    } catch (error) {
+      console.error("Error submitting report: ", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -172,26 +164,24 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ onAddReport }) => {
           <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">2. Voice Note (Optional)</label>
           <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <button 
-              onClick={toggleRecording}
+              onClick={() => isRecording ? handleStopRecording() : startRecording()}
               className={`p-4 rounded-full transition-all ${isRecording ? 'bg-red-500 animate-pulse text-white' : 'bg-blue-100 text-blue-600'}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7-7v4m0 0H8m4 0h4m-4-8a3 3 0 013 3V11a3 3 0 11-6 0V6a3 3 0 013-3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7V4m0 0H8m4 0h4m-4 8a3 3 0 013-3v-2a3 3 0 00-3-3H9a3 3 0 00-3 3v2a3 3 0 013 3z" />
               </svg>
             </button>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-700">
-                {isRecording ? 'Recording...' : audioBlob ? 'Voice recorded' : 'Tap to record details'}
-              </p>
-              {audioBlob && !isRecording && (
-                <button onClick={() => setAudioBlob(null)} className="text-xs text-red-500 font-semibold uppercase mt-1">Delete Note</button>
+            <div className="flex-1 h-12">
+              {isRecording && analyser ? (
+                <AudioWaveform analyser={analyser} />
+              ) : (
+                <div className="flex items-center h-full">
+                   <p className="text-sm font-medium text-slate-700">
+                    {isTranscribing ? 'Transcribing note...' : audioData.url ? 'Voice note captured' : 'Tap to record a voice note'}
+                  </p>
+                </div>
               )}
             </div>
-            {audioBlob && !isRecording && (
-              <div className="flex space-x-1">
-                {[1,2,3,4,5].map(i => <div key={i} className="w-1 h-4 bg-blue-400 rounded-full"></div>)}
-              </div>
-            )}
           </div>
         </section>
 
@@ -220,19 +210,19 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ onAddReport }) => {
           <textarea 
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Describe the issue (e.g. deep pothole, blocked drain)"
+            placeholder="Describe the issue or record a voice note..."
             className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            rows={3}
+            rows={4}
           />
         </section>
 
         {/* Submit Action */}
         <div className="pt-4 pb-12">
           <button 
-            disabled={!photo || isSubmitting}
+            disabled={!photo || isSubmitting || isTranscribing}
             onClick={handleSubmit}
             className={`w-full py-4 rounded-3xl text-white font-poppins font-semibold text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center ${
-              !photo || isSubmitting ? 'bg-slate-300 shadow-none cursor-not-allowed' : 'bg-blue-600 shadow-blue-200 hover:bg-blue-700'
+              !photo || isSubmitting || isTranscribing ? 'bg-slate-300 shadow-none cursor-not-allowed' : 'bg-blue-600 shadow-blue-200 hover:bg-blue-700'
             }`}
           >
             {isSubmitting ? (

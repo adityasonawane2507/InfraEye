@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { RoadReport } from '../types';
 
 interface ConfirmationScreenProps {
@@ -8,53 +8,46 @@ interface ConfirmationScreenProps {
 }
 
 const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ reports }) => {
-  const { id } = useParams();
   const navigate = useNavigate();
-  const report = reports.find(r => r.id === id);
+  const { id } = useParams();
+
+  const report = id === 'new' 
+    ? reports.sort((a, b) => b.timestamp - a.timestamp)[0] 
+    : reports.find(r => r.id === id);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white">
-      <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-xl shadow-green-100 animate-bounce">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-blue-600 text-white text-center">
+      <div className="bg-white/20 p-6 rounded-full mb-8">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-
-      <h2 className="text-3xl font-poppins font-bold text-slate-800 mb-2">Report Submitted!</h2>
-      <p className="text-slate-500 mb-8 max-w-xs mx-auto">
-        Your report has been successfully logged. Municipal officers will be alerted immediately.
-      </p>
-
-      <div className="w-full bg-slate-50 rounded-3xl p-6 mb-10 border border-slate-100 text-left">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Report ID</span>
-          <span className="text-blue-600 font-mono font-bold">#{id}</span>
+      <h1 className="text-3xl font-poppins font-bold mb-3">Report Submitted!</h1>
+      <p className="text-blue-100 max-w-sm mb-8">Thank you for making our city safer. Your report has been sent to the NEUROROAD™ command center.</p>
+      
+      <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl shadow-xl text-slate-800 w-full max-w-sm mb-12">
+        <div className="border-b border-slate-200 pb-4 mb-4">
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Report ID</p>
+          <p className="text-lg font-mono font-bold break-all">{report?.id || 'N/A'}</p>
         </div>
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Status</span>
-          <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-lg text-xs font-bold uppercase">Pending Review</span>
-        </div>
-        <div className="border-t border-slate-200 pt-4 mt-2">
-           <p className="text-xs text-slate-400 leading-relaxed">
-             You can track the status of this report from your dashboard. Most repairs take 3-5 business days.
-           </p>
+        <div className="flex justify-between items-center text-center">
+           <div>
+             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Status</p>
+             <p className="font-semibold text-blue-600">{report?.status}</p>
+           </div>
+           <div className="border-l border-slate-200 pl-6 ml-6">
+             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Guardian Points</p>
+             <p className="font-bold text-2xl text-green-500">+10</p>
+           </div>
         </div>
       </div>
 
-      <div className="w-full space-y-4">
-        <button 
-          onClick={() => navigate('/')}
-          className="w-full bg-slate-800 text-white py-4 rounded-3xl font-poppins font-semibold shadow-lg active:scale-95 transition-all"
-        >
-          Back to Dashboard
-        </button>
-        <button 
-           onClick={() => navigate('/report')}
-           className="w-full text-blue-600 py-4 font-semibold hover:bg-blue-50 rounded-3xl transition-all"
-        >
-          Report Another Issue
-        </button>
-      </div>
+      <button 
+        onClick={() => navigate('/')}
+        className="w-full max-w-sm bg-white text-blue-600 font-poppins font-semibold py-4 rounded-3xl shadow-lg hover:bg-blue-50 transition-colors"
+      >
+        Back to Home
+      </button>
     </div>
   );
 };
