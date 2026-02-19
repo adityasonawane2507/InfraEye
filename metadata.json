@@ -1,5 +1,5 @@
 {
-  "name": "InfraEye",
+  "name": "InfraEye2.0",
   "description": "Smart Road Damage Reporting & Rapid Response System for citizens and municipal officers.",
   "requestFramePermissions": [
     "camera",
