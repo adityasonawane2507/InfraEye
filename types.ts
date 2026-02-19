@@ -1,9 +1,8 @@
 
-export type ReportStatus = 'Pending' | 'In Progress' | 'Fixed' | 'Rejected' | 'Queued';
+export type ReportStatus = 'Pending' | 'In Progress' | 'Fixed' | 'Rejected';
 
 export interface RoadReport {
   id: string;
-  tempId?: string;
   timestamp: number;
   latitude: number;
   longitude: number;
@@ -14,12 +13,6 @@ export interface RoadReport {
   locationName?: string;
 }
 
-export interface User {
-  uid: string;
-  email: string | null;
-  name?: string;
-  roadGuardianStats?: {
-    score: number;
-    rank: number;
-  };
+export interface UserState {
+  reports: RoadReport[];
 }
